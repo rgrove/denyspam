@@ -1,0 +1,72 @@
+= DenySpam
+
+Monitors a Sendmail log file and uses Packet Filter to temporarily block
+incoming packets from hosts that display spammer-like behavior.
+
+Version::   1.0.0
+Author::    Ryan Grove (mailto:ryan@wonko.com)
+Copyright:: Copyright (c) 2005 Ryan Grove
+License::   DenySpam is open source software distributed under the terms of
+            the GNU General Public License.
+Website::   http://wonko.com/software/denyspam
+
+=== Dependencies
+
+* Ruby[http://ruby-lang.org/] 1.8.2
+* {Packet Filter}[http://openbsd.org/faq/pf/] (if you're running a recent
+  version of OpenBSD, FreeBSD, NetBSD, or DragonFlyBSD, you probably already
+  have PF installed)
+
+=== How does it work?
+
+A simple and easily customizable regexp-based ruleset assigns a running score
+to each host based on the log entries it generates. A host with a negative
+score is probably not a spammer, while a host with a positive score probably
+is.
+
+To avoid blocking legitimate mail, each host is assigned a low initial
+score (the default is -10, but the number can be changed in
+<tt>denyspam.conf</tt>). In order to be considered a spammer, a host would
+have to display enough bad behavior to accumulate 11 points (for a total
+score of 1).
+
+=== What constitutes spammer-like behavior?
+
+Spammers tend to use stupid, badly-written mailers that display easily
+recognizable behavior.
+
+For example, spammers often connect to a mail server and attempt to send
+messages to huge numbers of nonexistent users in the hope that a few of the
+randomly-chosen usernames actually exist. Legitimate mailers may occasionally
+attempt to send mail to a nonexistent user, but almost never more than one
+at a time.
+
+DenySpam would assign the connecting host one point for each attempt to send
+mail to a nonexistent user. A spammer would quickly accumulate enough points
+to reach a positive score, causing DenySpam to tell PF to block packets from
+that host for a certain amount of time (ten minutes per positive point by
+default).
+
+=== Isn't it possible that DenySpam could block a legitimate host?
+
+It's possible, but not likely. DenySpam's default configuration is
+conservative, yet effective.
+
+Since all hosts start with negative points by default, it's unlikely that
+a legitimate host would accumulate a positive score. In addition, DenySpam
+rewards good behavior (like successfully delivering an email without
+generating any errors) with negative points. This way, legitimate hosts will
+quickly accumulate very low scores, making it even less likely that a false
+positive will occur.
+
+Nevertheless, if a legitimate host is actually quirky enough to get itself
+blocked, the mail will most likely only be delayed. Almost all legitimate
+mail servers will continue trying to send a message for up to four days
+before giving up. Since DenySpam only blocks hosts for 10 minutes per point
+by default, it's extremely unlikely that a legitimate mailer will dig itself
+a hole so deep that DenySpam will block it for four entire days.
+
+In other words, with DenySpam's default settings, you probably won't lose
+any legitimate mail unless the sender behaves so badly that it accumulates a
+score of 576. A score that high would be a pretty big achievement even for
+a spammer!

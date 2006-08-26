@@ -1,0 +1,200 @@
+#
+# denyspam.conf - DenySpam configuration file.
+#
+# $Id: denyspam.conf.sample,v 1.10 2005/08/29 21:19:36 ryan Exp $
+#
+# Syntax:
+#   string:    '...' or "..."
+#   integer:   5 or -5 (no quotes)
+#   regexp:    /.../
+#   hash:      { key => value, ... }
+#   array:     [ value, ... ]
+#   procedure: proc {|arglist| Ruby code }
+#
+# You guessed it; this file is Ruby, so you've gotta use Ruby syntax. But
+# Ruby's a real friendly sort of language, so don't you worry. Just pay
+# attention to the comments and you'll be fine.
+#
+# Credit where credit is due: the format of this file was inspired by that of
+# pkgtools.conf, from the lovely pkgtools suite for FreeBSD (also written in
+# Ruby).
+#
+
+module DenySpamConfig # <-- do not remove this line
+
+	# SENDMAIL_LOGFILE: string (default: '/var/log/maillog')
+	#
+	# Path to your Sendmail logfile.
+
+	SENDMAIL_LOGFILE = '/var/log/maillog'
+
+	# HOSTDATA: string (default: '/usr/local/share/denyspam/hostdata')
+	#
+	# Path to the file DenySpam should use to persist host data. If this is set
+	# to nil or an empty string, DenySpam will not remember hosts between uses,
+	# which may decrease effectiveness.
+	#
+	# DenySpam will attempt to create the specified file and directory structure
+	# if either does not already exist.
+
+	HOSTDATA = '/usr/local/share/denyspam/hostdata'
+
+	# PFCTL: string (default: '/sbin/pfctl')
+	#
+	# Path to the pfctl executable on your system. DenySpam uses pfctl to manage
+	# the table of spammer IP addresses that it sends to PF.
+
+	PFCTL = '/sbin/pfctl'
+
+	# PF_TABLE: string (default: 'denyspam')
+	#
+	# Name of the PF table to populate with spammer IP addresses.
+	#
+	# In order for this to be useful, you'll need to add one or more rules to
+	# your PF config file to block or redirect incoming packets from addresses in
+	# this table.
+	#
+	# See http://openbsd.org/faq/pf/ for more information on configuring PF, or
+	# take a look at http://wonko.com/software/denyspam/faq/ for some example PF
+	# configurations.
+
+	PF_TABLE = 'denyspam'
+
+	# BLOCK_MINUTES: integer (default: 10)
+	#
+	# Number of minutes to block a spamming host for each positive point in its
+	# cumulative score.
+	#
+	# A spammer with a cumulative score of 5 will be blocked for an amount of
+	# time equal to BLOCK_MINUTES * 5. If BLOCK_MINUTES is 10, then the spammer
+	# will be blocked for 50 minutes.
+
+	BLOCK_MINUTES = 30
+
+	# DEFAULT_SCORE: integer (default: -10)
+	#
+	# Score assigned to each host the first time it is seen, before rules are
+	# applied. After applying rules, any host with a score greater than 0 will be
+	# considered a spammer.
+
+	DEFAULT_SCORE = -10
+
+	# RULES: hash
+	#
+	# Regexp-based rules to apply to each new Sendmail log entry.
+	#
+	# This is a hash of arrays, each array containing one or more regular
+	# expressions. Each expression will be evaluated against the descriptive
+	# portion of a Sendmail log entry (the portion beginning after the queue id
+	# and continuing to the end of the line).
+	#
+	# The keys of the hash should be integers (either positive or negative)
+	# representing the score to be applied if an expression matches the log entry
+	# being tested. A positive score indicates bad (spammer-like) behavior, while
+	# a negative score indicates good behavior.
+	#
+	# See the FAQ at http://wonko.com/software/denyspam/faq/ for more details.
+	#
+	# Example:
+	#
+	#		RULES = {
+	#			5 => [
+	#				/^Possible SMTP RCPT flood/,
+	#				/^rejecting commands from .* due to pre-greeting traffic/,
+	#			],
+	#
+	#			2 => [
+	#				/^ruleset=.* reject=(?:550 5\.7\.1|553 5\.1\.[78])/,
+	#				/^<.*>\.\.\. User unknown/,
+	#			],
+	#
+	#			1 => [
+	#				/^ruleset=.* reject=451 4\.1\.[378]/,
+	#				/^timeout waiting for input from .* during server cmd read/,
+	#				/^lost input channel from .* to MTA after (?:data|rcpt)/,
+	#				/^\[.*\] did not issue MAIL\/EXPN\/VRFY\/ETRN during connection to MTA/,
+	#			],
+	#
+	#			-1 => [
+	#				/^to=.*, stat=Sent/,
+	#			],
+	#		}
+
+	RULES = {
+		7 => [
+			/^Possible SMTP RCPT flood/,
+			/^rejecting commands from .* due to pre-greeting traffic/,
+		],
+
+		3 => [
+			/^ruleset=.* reject=(?:550 5\.7\.1|553 5\.1\.[78])/,
+			/^<.*>\.\.\. User unknown/,
+		],
+
+		2 => [
+			/^ruleset=.* reject=451 4\.1\.[378]/,
+		],
+
+		1 => [
+			/^timeout waiting for input from .* during server cmd read/,
+			/^lost input channel from .* to MTA after (?:data|rcpt)/,
+			/^\[.*\] did not issue MAIL\/EXPN\/VRFY\/ETRN during connection to MTA/,
+		],
+
+		-1 => [
+			/^to=.*, stat=Sent/,
+		],
+	}
+
+	# ADVANCED_RULES: hash
+	#
+	# Ruby procedures to run for each new Sendmail log entry.
+	#
+	# The format of this hash is the same as the RULES hash, except that each
+	# hash entry should contain an array of Ruby procedures rather than regular
+	# expressions. Each procedure should accept two arguments: a Host object
+	# representing the remote mail server and a string containing the log entry
+	# being evaluated.
+	#
+	# If the return value of a procedure evaluates as true, the rule is
+	# considered a match and points are assigned. Otherwise, no action is taken.
+	#
+	# By the way, the DenySpam::Util module contains some methods that you may
+	# find useful in writing advanced rules. Consult the documentation for more
+	# details.
+	#
+	# Example:
+	#
+	#		ADVANCED_RULES = {
+	#			7 => [
+	#				proc {|host, message|
+	#					host.times_seen == 1 && DenySpam::Util::RBL::sbl_xbl?(host.addr)
+	#				},
+	#			],
+	#
+	#			5 => [
+	#				proc {|host, message|
+	#					host.times_seen == 1 && DenySpam::Util::RBL::spamcop?(host.addr)
+	#				},
+	#
+	#				proc {|host, message|
+	#					host.times_seen == 1 && DenySpam::Util::RBL::ordb?(host.addr)
+	#				},
+	#			],
+	#
+	#			-20 => [
+	#				proc {|host, message|
+	#					host.times_seen == 1 && host.addr == '192.168.0.105'
+	#				},
+	#			],
+	#		}
+
+	ADVANCED_RULES = {
+		5 => [
+			proc {|host, message|
+				host.times_seen == 1 && DenySpam::Util::RBL::spamcop?(host.addr)
+			},
+		],
+	}
+
+end # <-- do not remove this line
