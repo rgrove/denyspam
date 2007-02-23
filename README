@@ -1,18 +1,18 @@
 = DenySpam
 
-Monitors a Sendmail log file and uses Packet Filter to temporarily block
+Monitors a mail server log file and uses Packet Filter to temporarily block
 incoming packets from hosts that display spammer-like behavior.
 
 Version::   1.0.0
 Author::    Ryan Grove (mailto:ryan@wonko.com)
-Copyright:: Copyright (c) 2005 Ryan Grove
+Copyright:: Copyright (c) 2007 Ryan Grove
 License::   DenySpam is open source software distributed under the terms of
-            the GNU General Public License.
+            the New BSD License.
 Website::   http://wonko.com/software/denyspam
 
 === Dependencies
 
-* Ruby[http://ruby-lang.org/] 1.8.2
+* Ruby[http://ruby-lang.org/] 1.8.4+
 * {Packet Filter}[http://openbsd.org/faq/pf/] (if you're running a recent
   version of OpenBSD, FreeBSD, NetBSD, or DragonFlyBSD, you probably already
   have PF installed)
