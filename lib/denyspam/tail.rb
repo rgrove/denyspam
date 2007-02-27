@@ -1,57 +1,76 @@
-module DenySpam
+#--
+# Copyright (c) 2007 Ryan Grove <ryan@wonko.com>
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+#   * Redistributions of source code must retain the above copyright notice,
+#     this list of conditions and the following disclaimer.
+#   * Redistributions in binary form must reproduce the above copyright notice,
+#     this list of conditions and the following disclaimer in the documentation
+#     and/or other materials provided with the distribution.
+#   * Neither the name of this project nor the names of its contributors may be
+#     used to endorse or promote products derived from this software without
+#     specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#++
 
-  # Provides <tt>tail -f</tt> functionality used to monitor a log file for
-  # changes. Automatically reopens the file if it is truncated or deleted.
+class DenySpam
+
+  # Provides <tt>tail -f</tt> functionality used to monitor a file for changes.
+  # Automatically reopens the file if it is truncated or deleted.
   class Tail
 
     attr_accessor :interval
-    attr_reader :filename, :last_change, :last_pos
+    attr_reader   :filename, :last_pos
 
-    def initialize(filename, interval = 10, start_pos = 0)
-      @filename    = filename
-      @interval    = interval
-      @last_change = Time.now
-      @last_pos    = 0
-      @last_stat   = nil
-      @start_pos   = start_pos
+    def initialize(filename, last_pos = 0, interval = 15)
+      @filename  = filename
+      @last_pos  = last_pos
+      @interval  = interval
+      @last_stat = nil
     end
 
     # Begins tailing the file. When a new line appears, it's passed to the
     # block.
     def tail(&block) # :yields: line
-      unless File.exist?(@filename)
-        Syslog::log(Syslog::LOG_DEBUG,
-            '%s does not exist; waiting for it to be created', @filename)
-
-        until File.exist?(@filename)
-          sleep 10
-        end
-
-        Syslog::log(Syslog::LOG_DEBUG, '%s has been created', @filename)
+      # Wait for the file to be created if it doesn't already exist.
+      until File.exist?(@filename)
+        sleep 30
       end
 
+      # Make sure the file isn't a directory.
       if File.directory?(@filename)
-        Syslog::log(Syslog::LOG_ERR, 'error: %s is a directory; aborting',
-            @filename)
-        Syslog::close
+        if Syslog::opened?
+          Syslog::log(Syslog::LOG_ERR, 'error: %s is a directory', @filename)
+          Syslog::log(Syslog::LOG_INFO, 'shutting down')
+          Syslog::close
+        end
 
         abort "** Error: #{@filename} is a directory"
       end
 
+      # Begin watching the file.
       File.open(@filename) do |@file|
         begin
-          @file.pos = @start_pos if @start_pos > 0
-
+          @file.pos = @last_pos if @last_pos > 0
         rescue EOFError
-          Syslog::log(Syslog::LOG_DEBUG, 'previous position in %s is past ' +
-              'the end of the file; restarting at the beginning',
-              @filename)
-
           @file.rewind
         end
 
         loop do
-          _restat
+          restat
 
           changed = false
 
@@ -60,18 +79,7 @@ module DenySpam
             yield line
           end
 
-          if changed
-            @last_change = Time.now
-            @last_pos    = @file.pos
-          elsif Time.now - @last_change > 600
-            # Reopen the file if it hasn't changed in over 10 minutes.
-            Syslog::log(Syslog::LOG_DEBUG, "%s hasn't changed in over 10 " +
-                "minutes; reopening the file just to be safe...",
-                @filename)
-
-            _reopen
-          end
-
+          @last_pos = @file.pos if changed
           @file.seek(0, File::SEEK_CUR)
 
           sleep @interval
@@ -83,40 +91,32 @@ module DenySpam
 
     # Reopens the file. This is necessary if the file is deleted or truncated
     # while we're watching it.
-    def _reopen
+    def reopen
       @file.reopen(@filename)
+      @last_pos = 0
 
-      @last_change = Time.now
-      @last_pos    = 0
-
-      Syslog::log(Syslog::LOG_DEBUG, '%s has been reopened', @filename)
+      Syslog::log(Syslog::LOG_INFO, 'reopening %s', @filename)
 
     rescue Errno::ENOENT
     rescue Errno::ESTALE
-      sleep 10
+      # File isn't there. Wait for it to reappear.
+      sleep 15
       retry
-
     end
 
     # Performs various checks to determine whether we should reopen the file.
-    def _restat
+    def restat
       stat = File.stat(@filename)
 
-      if @last_stat
+      if !@last_stat.nil?
         if stat.ino != @last_stat.ino || stat.dev != @last_stat.dev
-          Syslog::log(Syslog::LOG_DEBUG, '%s appears to have been deleted; ' +
-              'attempting to reopen', @filename)
-
+          # File was replaced. Reopen it.
           @last_stat = nil
-
-          _reopen
+          reopen
         elsif stat.size < @last_stat.size
-          Syslog::log(Syslog::LOG_DEBUG, '%s appears to have been truncated; ' +
-              'attempting to reopen', @filename)
-
+          # File was truncated. Reopen it.
           @last_stat = nil
-
-          _reopen
+          reopen
         end
       else
         @last_stat = stat
@@ -124,12 +124,10 @@ module DenySpam
 
     rescue Errno::ENOENT
     rescue Errno::ESTALE
-      Syslog::log(Syslog::LOG_DEBUG, '%s appears to have been deleted; ' +
-          'attempting to reopen', @filename)
-
-      _reopen
+      # File was deleted. Attempt to reopen it.
+      reopen
     end
 
   end
-
+  
 end

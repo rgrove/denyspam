@@ -18,15 +18,15 @@
 # Ruby).
 #
 
-module DenySpam; module Config # <-- don't remove this line
+class DenySpam; module Config # <-- don't remove this line
 
-  # MAILLOG: string (default: '/var/log/maillog')
+  # MAILLOG: string
   #
   # Path to your mail server log file.
 
-  MAILLOG = '/var/log/maillog'
+  # MAILLOG = '/var/log/maillog'
 
-  # HOSTDATA: string (default: '/usr/local/share/denyspam/hostdata')
+  # HOSTDATA: string
   #
   # Path to the file DenySpam should use to persist host data. If this is set
   # to nil or an empty string, DenySpam will not remember hosts between uses,
@@ -35,47 +35,44 @@ module DenySpam; module Config # <-- don't remove this line
   # DenySpam will attempt to create the specified file and directory structure
   # if either does not already exist.
 
-  HOSTDATA = '/usr/local/share/denyspam/hostdata'
+  # HOSTDATA = '/usr/local/share/denyspam/hostdata'
 
-  # PFCTL: string (default: '/sbin/pfctl')
+  # BLOCK_COMMAND: string
   #
-  # Path to the pfctl executable on your system. DenySpam uses pfctl to manage
-  # the table of spammer IP addresses that it sends to PF.
+  # Command to run to block one or more IP addresses.
 
-  PFCTL = '/sbin/pfctl'
-
-  # PF_TABLE: string (default: 'denyspam')
+  # BLOCK_COMMAND = '/sbin/pfctl -t denyspam -T add :addresses > /dev/null 2>&1'
+  
+  # UNBLOCK_COMMAND: string
   #
-  # Name of the PF table to populate with spammer IP addresses.
-  #
-  # In order for this to be useful, you'll need to add one or more rules to
-  # your PF config file to block or redirect incoming packets from addresses in
-  # this table.
-  #
-  # See http://openbsd.org/faq/pf/ for more information on configuring PF, or
-  # take a look at http://wonko.com/software/denyspam/faq/ for some example PF
-  # configurations.
+  # Command to run to unblock one or more IP addresses.
+  
+  # UNBLOCK_COMMAND = '/sbin/pfctl -t denyspam -T delete :addresses > /dev/null 2>&1'
 
-  PF_TABLE = 'denyspam'
-
-  # BLOCK_MINUTES: integer (default: 10)
+  # FLUSH_COMMAND: string
+  #
+  # Command to run to flush the firewall's table of blocked addresses.
+  
+  # FLUSH_COMMAND = '/sbin/pfctl -t denyspam -T flush > /dev/null 2>&1'
+  
+  # BLOCK_MINUTES: integer
   #
   # Number of minutes to block a spamming host for each positive point in its
   # cumulative score.
   #
   # A spammer with a cumulative score of 5 will be blocked for an amount of
-  # time equal to BLOCK_MINUTES * 5. If BLOCK_MINUTES is 10, then the spammer
-  # will be blocked for 50 minutes.
+  # time equal to BLOCK_MINUTES * 5. If BLOCK_MINUTES is 30, then the spammer
+  # will be blocked for 150 minutes.
 
-  BLOCK_MINUTES = 30
+  # BLOCK_MINUTES = 30
 
-  # DEFAULT_SCORE: integer (default: -10)
+  # DEFAULT_SCORE: integer
   #
   # Score assigned to each host the first time it is seen, before rules are
   # applied. After applying rules, any host with a score greater than 0 will be
   # considered a spammer.
 
-  DEFAULT_SCORE = -10
+  # DEFAULT_SCORE = -10
 
   # RULES: hash
   #
@@ -187,12 +184,12 @@ module DenySpam; module Config # <-- don't remove this line
   #      ],
   #    }
 
-  ADVANCED_RULES = {
-    5 => [
-      proc {|host, message|
-        host.times_seen == 1 && DenySpam::Util::RBL.spamcop?(host.addr)
-      },
-    ],
-  }
+  # ADVANCED_RULES = {
+  #   5 => [
+  #     proc {|host, message|
+  #       host.times_seen == 1 && DenySpam::Util::RBL.spamcop?(host.addr)
+  #     },
+  #   ],
+  # }
 
 end; end # <-- don't remove this line
