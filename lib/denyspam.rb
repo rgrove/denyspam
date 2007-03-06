@@ -41,6 +41,10 @@ require 'thread'
 require 'time'
 require 'yaml'
 
+# RubyGems includes
+require 'rubygems'
+require 'kirbybase'
+
 # DenySpam includes
 require 'denyspam/config'
 require 'denyspam/host'
@@ -68,7 +72,7 @@ class DenySpam
     @threads = {}
     
     Config.load_config(config_file)
-    
+        
     load_data
     flush_table
     update_table
@@ -114,10 +118,11 @@ class DenySpam
     end
     
     # Data writing thread. Writes DenySpam data to disk at regular intervals if
-    # it's changed since the last write.
-    @threads[:data] = Thread.new do
-      old_lastpos#STARTHERE
+    # it has changed since the last write.
+    @threads[:data] = Thread.new do      
+      # TODO: Use an on-disk database instead of storing the host data in memory.      
       loop do
+    		save_data
         sleep 120
       end
     end
@@ -170,11 +175,11 @@ class DenySpam
     if File.exist?(Config::HOSTDATA)
       data = YAML.load_file(Config::HOSTDATA)
       
-      @hosts   = data[:hosts]
       @lastpos = data[:lastpos]
+      @hosts   = data[:hosts]
     else
-      @hosts   = {}
       @lastpos = 0
+      @hosts   = {}
     end
   
   rescue Exception => e
@@ -193,8 +198,8 @@ class DenySpam
     end
     
     data = {
-      :hosts   => @hosts,
-      :lastpos => @lastpos
+      :lastpos => @lastpos,
+      :hosts   => @hosts
     }
     
     File.open(Config::HOSTDATA, 'w') {|file| YAML.dump(data, file) }

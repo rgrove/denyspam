@@ -28,12 +28,10 @@ class DenySpam; module Config # <-- don't remove this line
 
   # HOSTDATA: string
   #
-  # Path to the file DenySpam should use to persist host data. If this is set
-  # to nil or an empty string, DenySpam will not remember hosts between uses,
-  # which may decrease effectiveness.
+  # File DenySpam should use to store its host data.
   #
-  # DenySpam will attempt to create the specified file and directory structure
-  # if either does not already exist.
+  # DenySpam will attempt to create the specified file and directory if they
+  # don't already exist.
 
   # HOSTDATA = '/usr/local/share/denyspam/hostdata'
 
