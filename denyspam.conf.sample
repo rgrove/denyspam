@@ -98,6 +98,7 @@ module DenySpam; module Config # <-- don't remove this line
     
     2 => [
       /^NOQUEUE: reject: .+?: 550 5\.1\.1/,  # Uknown recipient
+      /^NOQUEUE: reject: .+?: 501 5\.5\.2/,  # Invalid name during HELO
     ],
     
     1 => [
