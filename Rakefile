@@ -12,7 +12,7 @@ spec = Gem::Specification.new do |s|
   s.email    = 'ryan@wonko.com'
   s.homepage = 'http://wonko.com/software/denyspam'
   s.platform = Gem::Platform::RUBY
-  s.summary  = "Monitors a mail server log file and uses Packet Filter to " +
+  s.summary  = "Monitors a mail server log file and uses a firewall to " +
                "temporarily block or redirect incoming packets from hosts " +
                "that display spammer-like behavior."
   
@@ -28,7 +28,7 @@ spec = Gem::Specification.new do |s|
                     '--main' << 'README' <<
                     '--line-numbers'
 
-  s.required_ruby_version = '>= 1.8.4'
+  s.required_ruby_version = '>= 1.8.5'
 end
 
 Rake::GemPackageTask.new(spec) do |pkg|

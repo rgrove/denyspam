@@ -86,6 +86,50 @@ module DenySpam
     system(Config::FLUSH_COMMAND)
   end
   
+  # Loads DenySpam data from disk.
+  def self.load_data
+    if File.exist?(Config::HOSTDATA)
+      data = {}
+      
+      File.open(Config::HOSTDATA, 'r') {|file| data = Marshal.load(file) }
+      
+      @lastpos = data[:lastpos]
+      @hosts   = data[:hosts]
+    else
+      @lastpos = 0
+      @hosts   = {}
+    end
+  
+  rescue Exception => e
+    if Syslog.opened?
+      Syslog.log(Syslog::LOG_ERR, 'error loading data: %s', e)
+    end
+    
+    abort "** Error loading data: #{e}"
+  end
+  
+  # Saves DenySpam data to disk.
+  def self.save_data
+    # Create the containing directory if it doesn't exist.
+    unless File.exist?(File.dirname(Config::HOSTDATA))
+      FileUtils.mkdir_p(File.dirname(Config::HOSTDATA))
+    end
+    
+    data = {
+      :lastpos => @lastpos,
+      :hosts   => @hosts
+    }
+    
+    File.open(Config::HOSTDATA, 'w') {|file| Marshal.dump(data, file) }
+    
+  rescue Exception => e
+    if Syslog.opened?
+      Syslog.log(Syslog::LOG_ERR, 'error saving data: %s', e)
+    else
+      STDERR.puts "** Error saving data: #{e}"
+    end
+  end
+  
   # Opens the syslog and loads the config file and host data.
   def self.start(config_file)
     Syslog.open('denyspam', 0, Syslog::LOG_MAIL)
@@ -347,28 +391,6 @@ module DenySpam
     return params
   end
   
-  # Loads DenySpam data from disk.
-  def self.load_data
-    if File.exist?(Config::HOSTDATA)
-      data = {}
-      
-      File.open(Config::HOSTDATA, 'r') {|file| data = Marshal.load(file) }
-      
-      @lastpos = data[:lastpos]
-      @hosts   = data[:hosts]
-    else
-      @lastpos = 0
-      @hosts   = {}
-    end
-  
-  rescue Exception => e
-    if Syslog.opened?
-      Syslog.log(Syslog::LOG_ERR, 'error loading data: %s', e)
-    end
-    
-    abort "** Error loading data: #{e}"
-  end
-  
   def self.parse_entry(line)
     case line
       when Config::REGEXP_CONNECT
@@ -416,28 +438,6 @@ module DenySpam
     end
     
     return true
-  end
-  
-  # Saves DenySpam data to disk.
-  def self.save_data
-    # Create the containing directory if it doesn't exist.
-    unless File.exist?(File.dirname(Config::HOSTDATA))
-      FileUtils.mkdir_p(File.dirname(Config::HOSTDATA))
-    end
-    
-    data = {
-      :lastpos => @lastpos,
-      :hosts   => @hosts
-    }
-    
-    File.open(Config::HOSTDATA, 'w') {|file| Marshal.dump(data, file) }
-    
-  rescue Exception => e
-    if Syslog.opened?
-      Syslog.log(Syslog::LOG_ERR, 'error saving data: %s', e)
-    else
-      STDERR.puts "** Error saving data: #{e}"
-    end
   end
   
   # Replaces parameters (e.g. :param) in the given string with the specified

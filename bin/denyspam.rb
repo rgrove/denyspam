@@ -29,6 +29,7 @@
 
 # stdlib includes
 require 'optparse'
+require 'yaml'
 
 # RubyGems includes
 require 'rubygems'
@@ -37,7 +38,7 @@ require 'denyspam'
 PREFIX = '/usr/local'
 
 APP_NAME      = 'DenySpam'
-APP_VERSION   = '1.0.0-beta'
+APP_VERSION   = '1.0.0'
 APP_COPYRIGHT = 'Copyright (c) 2007 Ryan Grove <ryan@wonko.com>. All rights reserved.'
 APP_URL       = 'http://wonko.com/software/denyspam/'
 
@@ -46,8 +47,12 @@ module DenySpam
   options = {
     :config_file => ENV['DENYSPAM_CONF'] || File.join(PREFIX, 'etc',
         'denyspam.conf'),
-    :command => :start,
-    :mode    => :monitor
+    :command       => :start,
+    :export_format => :yaml,
+    :ip            => nil,
+    :mode          => :monitor,
+    :sort          => :ip,
+    :sort_order    => :asc
   }
   
   optparse = OptionParser.new do |optparse|
@@ -69,6 +74,38 @@ module DenySpam
         'to the ' + APP_NAME + ' daemon.') do |command|
       options[:command] = command
       options[:mode]    = :daemon
+    end
+    
+    optparse.on('-i', '--info [ip]',
+        'Display information about the specified IP address,',
+        'or all addresses if no address is specified.') do |ip|
+      options[:ip]   = ip
+      options[:mode] = :info
+    end
+    
+    optparse.on('-s', '--sort [column]', 
+        [:ip, :score, :sessions, :seen, :blocked],
+        'Sort information display by the specified column',
+        '(ip, score, sessions, seen, or blocked) in',
+        'ascending order.') do |column|
+      options[:sort] = column
+    end
+    
+    optparse.on('-S', '--sort-desc [column]', 
+        [:ip, :score, :sessions, :seen, :blocked],
+        'Sort information display by the specified column',
+        '(ip, score, sessions, seen, or blocked) in',
+        'descending order.') do |column|
+      options[:sort]       = column
+      options[:sort_order] = :desc
+    end
+    
+    optparse.on('-x', '--export [format]',
+        [:yaml, :xml],
+        'Export host information in the specified format',
+        '(yaml or xml).') do |format|
+      options[:mode]          = :export
+      options[:export_format] = format
     end
     
     optparse.on_tail('-h', '--help',
@@ -96,24 +133,87 @@ module DenySpam
     abort("Error: #{e}")
   end
   
-  if options[:mode] == :daemon
-    case options[:command]
-      when :start
-        start_daemon(File.expand_path(options[:config_file]))
+  case options[:mode]
+    when :daemon
+      case options[:command]
+        when :start
+          start_daemon(File.expand_path(options[:config_file]))
+          
+        when :stop
+          stop_daemon
+          
+        when :restart
+          stop_daemon
+          start_daemon(File.expand_path(options[:config_file]))
+          
+        else
+          abort("** Error: invalid daemon command: #{options[:command]}")
+      end  
+
+    when :monitor
+      # Start monitoring.
+      start(options[:config_file])
+      start_monitoring.join
+    
+    when :info
+      ip = options[:ip]
+      
+      # Load config.
+      Config.load_config(options[:config_file])
+      
+      # Load host data.
+      load_data
+      
+      # Display statistics.
+      puts 'IP              | Score   | Sessions | Last seen         | Blocked until'
+      puts '----------------+---------+----------+-------------------+-------------------'
+
+      case options[:sort]
+        when :score
+          hosts = @hosts.sort_by {|item| item[1].score }
+          
+        when :sessions
+          hosts = @hosts.sort_by {|item| item[1].times_seen }
+          
+        when :seen
+          hosts = @hosts.sort_by {|item| item[1].last_seen }
+          
+        when :blocked
+          hosts = @hosts.sort_by do |item|
+            item[1].blocked_until.nil? ? Time.at(0) : item[1].blocked_until
+          end
+          
+        else
+          hosts = @hosts.sort_by {|item| IPAddr.new(item[0]) }
+      end
+      
+      hosts.reverse! if options[:sort_order] == :desc
+      
+      hosts.each do |host_ip, host|
+        next unless ip.nil? || host_ip == ip
         
-      when :stop
-        stop_daemon
-        
-      when :restart
-        stop_daemon
-        start_daemon(File.expand_path(options[:config_file]))
-        
-      else
-        abort("** Error: invalid daemon command: #{options[:command]}")
-    end  
-  elsif options[:mode] == :monitor
-    # Start monitoring.
-    start(options[:config_file])
-    start_monitoring.join
+        puts format('%-15s | %7d | %8d | %-17s | %-17s',
+            host.ip,
+            host.score,
+            host.times_seen,
+            host.last_seen.nil? ? '' : host.last_seen.strftime('%b %d %H:%M %Z'),
+            host.blocked_until.nil? ? '' : host.blocked_until.strftime('%b %d %H:%M %Z'))
+      end
+
+      exit
+    
+    when :export
+      # Load config.
+      Config.load_config(options[:config_file])
+      
+      # Load host data.
+      load_data
+      
+      # Export data.
+      if options[:export_format] == :yaml
+        puts YAML.dump(@hosts)
+      elsif options[:export_format] == :xml
+        abort('** Error: xml export not yet implemented (sorry!)')
+      end
   end
 end
