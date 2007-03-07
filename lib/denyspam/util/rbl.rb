@@ -26,7 +26,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #++
 
-class DenySpam; module Util
+module DenySpam; module Util
 
   # Provides methods for performing Realtime Blackhole List lookups of IP
   # addresses. Results are cached for (by default) six hours to improve

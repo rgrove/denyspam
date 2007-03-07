@@ -1,5 +1,5 @@
 #
-# denyspam.conf - DenySpam configuration file.
+# denyspam.conf.sample - DenySpam sample configuration file.
 #
 # Syntax:
 #   string:    '...' or "..."
@@ -9,7 +9,7 @@
 #   array:     [ value, ... ]
 #   procedure: proc {|arglist| Ruby code }
 #
-# You guessed it; this file is Ruby, so you've gotta use Ruby syntax. But
+# You guessed it: this file is Ruby, so you've gotta use Ruby syntax. But
 # Ruby's a real friendly sort of language, so don't you worry. Just pay
 # attention to the comments and you'll be fine.
 #
@@ -18,7 +18,7 @@
 # Ruby).
 #
 
-class DenySpam; module Config # <-- don't remove this line
+module DenySpam; module Config # <-- don't remove this line
 
   # MAILLOG: string
   #

@@ -26,7 +26,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #++
 
-class DenySpam
+module DenySpam
 
   # Provides some useful utility methods that may come in handy for advanced
   # rules.

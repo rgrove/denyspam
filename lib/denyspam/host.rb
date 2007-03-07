@@ -26,7 +26,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #++
 
-class DenySpam;
+module DenySpam;
 
   # Represents a remote mail server.
   class Host

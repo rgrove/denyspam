@@ -26,7 +26,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #++
 
-class DenySpam; module Config
+module DenySpam; module Config
 
   @default = {
     :MAILLOG         => '/var/log/maillog',
@@ -60,13 +60,13 @@ class DenySpam; module Config
   rescue Exception => e
     message = e.message.gsub("\n", '; ')
 
-    if Syslog::opened?
-      Syslog::log(Syslog::LOG_ERR, 'configuration error in %s: %s', config_file,
+    if Syslog.opened?
+      Syslog.log(Syslog::LOG_ERR, 'configuration error in %s: %s', config_file,
           message)
-      Syslog::close
+      Syslog.close
     end
 
-    abort "Configuration error in #{config_file}: #{message}"
+    abort "** Error: configuration error in #{config_file}: #{message}"
   end
 
 end; end

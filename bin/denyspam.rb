@@ -27,27 +27,93 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #++
 
+# stdlib includes
+require 'optparse'
+
+# RubyGems includes
 require 'rubygems'
 require 'denyspam'
 
 PREFIX = '/usr/local'
 
-APP_NAME    = 'DenySpam'
-APP_VERSION = '1.0.0-beta'
-APP_URL     = 'http://wonko.com/software/denyspam/'
+APP_NAME      = 'DenySpam'
+APP_VERSION   = '1.0.0-beta'
+APP_COPYRIGHT = 'Copyright (c) 2007 Ryan Grove <ryan@wonko.com>. All rights reserved.'
+APP_URL       = 'http://wonko.com/software/denyspam/'
 
-CONFIG_FILE = ENV['DENYSPAM_CONF'] || File.join(PREFIX, 'etc', 'denyspam.conf')
+module DenySpam
 
-# Open Syslog.
-Syslog.open('denyspam', 0, Syslog::LOG_MAIL)
-
-# Start DenySpam.
-denyspam = DenySpam.new(CONFIG_FILE)
-monitor_thread = denyspam.start_monitoring
-
-# Setup signal handlers.
-for sig in [:SIGINT, :SIGQUIT, :SIGTERM]
-  trap(sig) { denyspam.stop_monitoring }
+  options = {
+    :config_file => ENV['DENYSPAM_CONF'] || File.join(PREFIX, 'etc',
+        'denyspam.conf'),
+    :command => :start,
+    :mode    => :monitor
+  }
+  
+  optparse = OptionParser.new do |optparse|
+    optparse.summary_width  = 24
+    optparse.summary_indent = '  '
+    
+    optparse.banner = 'Usage: denyspam [options]'
+    
+    optparse.separator ''
+    optparse.separator 'Options:'
+    
+    optparse.on('-c', '--config [filename]',
+        'Use the specified configuration file.') do |filename|
+      options[:config_file] = filename
+    end
+    
+    optparse.on('-d', '--daemon [command]', [:start, :stop, :restart],
+        'Issue the specified command (start, stop, or restart)',
+        'to the ' + APP_NAME + ' daemon.') do |command|
+      options[:command] = command
+      options[:mode]    = :daemon
+    end
+    
+    optparse.on_tail('-h', '--help',
+        'Display usage information (this message).') do
+      puts optparse
+      exit
+    end
+    
+    optparse.on_tail('-v', '--version',
+        'Display version information.') do
+      puts "#{APP_NAME} v#{APP_VERSION} <#{APP_URL}>"
+      puts "#{APP_COPYRIGHT}"
+      puts
+      puts "#{APP_NAME} comes with ABSOLUTELY NO WARRANTY."
+      puts
+      puts 'This program is open source software distributed under the BSD license. For'
+      puts 'details, see the LICENSE file contained in the source distribution.'
+      exit
+    end
+  end
+  
+  begin
+    optparse.parse!(ARGV)
+  rescue => e
+    abort("Error: #{e}")
+  end
+  
+  if options[:mode] == :daemon
+    case options[:command]
+      when :start
+        start_daemon(File.expand_path(options[:config_file]))
+        
+      when :stop
+        stop_daemon
+        
+      when :restart
+        stop_daemon
+        start_daemon(File.expand_path(options[:config_file]))
+        
+      else
+        abort("** Error: invalid daemon command: #{options[:command]}")
+    end  
+  elsif options[:mode] == :monitor
+    # Start monitoring.
+    start(options[:config_file])
+    start_monitoring.join
+  end
 end
-
-monitor_thread.join

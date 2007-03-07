@@ -26,7 +26,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #++
 
-class DenySpam
+module DenySpam
 
   # Provides <tt>tail -f</tt> functionality used to monitor a file for changes.
   # Automatically reopens the file if it is truncated or deleted.

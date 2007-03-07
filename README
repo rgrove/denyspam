@@ -1,7 +1,8 @@
 = DenySpam
 
-Monitors a mail server log file and uses Packet Filter to temporarily block
-incoming packets from hosts that display spammer-like behavior.
+Monitors a mail server log file and uses Packet Filter or another firewall to
+temporarily block incoming packets from hosts that display spammer-like
+behavior.
 
 Version::   1.0.0
 Author::    Ryan Grove (mailto:ryan@wonko.com)
@@ -12,10 +13,9 @@ Website::   http://wonko.com/software/denyspam
 
 === Dependencies
 
-* Ruby[http://ruby-lang.org/] 1.8.4+
-* {Packet Filter}[http://openbsd.org/faq/pf/] (if you're running a recent
-  version of OpenBSD, FreeBSD, NetBSD, or DragonFlyBSD, you probably already
-  have PF installed)
+* Ruby[http://ruby-lang.org/] 1.8.5+
+* Some form of mail server. Procmail is supported by default.
+* Some form of firewall. Packet Filter is supported by default.
 
 === How does it work?
 
