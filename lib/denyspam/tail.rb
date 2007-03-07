@@ -33,11 +33,11 @@ class DenySpam
   class Tail
 
     attr_accessor :interval
-    attr_reader   :filename, :last_pos
+    attr_reader   :filename, :lastpos
 
-    def initialize(filename, last_pos = 0, interval = 15)
+    def initialize(filename, lastpos = 0, interval = 15)
       @filename  = filename
-      @last_pos  = last_pos
+      @lastpos   = lastpos
       @interval  = interval
       @last_stat = nil
     end
@@ -52,10 +52,10 @@ class DenySpam
 
       # Make sure the file isn't a directory.
       if File.directory?(@filename)
-        if Syslog::opened?
-          Syslog::log(Syslog::LOG_ERR, 'error: %s is a directory', @filename)
-          Syslog::log(Syslog::LOG_INFO, 'shutting down')
-          Syslog::close
+        if Syslog.opened?
+          Syslog.log(Syslog::LOG_ERR, 'error: %s is a directory', @filename)
+          Syslog.log(Syslog::LOG_INFO, 'shutting down')
+          Syslog.close
         end
 
         abort "** Error: #{@filename} is a directory"
@@ -64,7 +64,7 @@ class DenySpam
       # Begin watching the file.
       File.open(@filename) do |@file|
         begin
-          @file.pos = @last_pos if @last_pos > 0
+          @file.pos = @lastpos if @lastpos > 0
         rescue EOFError
           @file.rewind
         end
@@ -72,14 +72,11 @@ class DenySpam
         loop do
           restat
 
-          changed = false
-
           while line = @file.gets
-            changed = true
+            @lastpos = @file.pos
             yield line
           end
 
-          @last_pos = @file.pos if changed
           @file.seek(0, File::SEEK_CUR)
 
           sleep @interval
@@ -93,7 +90,7 @@ class DenySpam
     # while we're watching it.
     def reopen
       @file.reopen(@filename)
-      @last_pos = 0
+      @lastpos = 0
 
       Syslog::log(Syslog::LOG_INFO, 'reopening %s', @filename)
 

@@ -30,7 +30,24 @@
 require 'rubygems'
 require 'denyspam'
 
+PREFIX = '/usr/local'
+
+APP_NAME    = 'DenySpam'
+APP_VERSION = '1.0.0-beta'
+APP_URL     = 'http://wonko.com/software/denyspam/'
+
+CONFIG_FILE = ENV['DENYSPAM_CONF'] || File.join(PREFIX, 'etc', 'denyspam.conf')
+
 # Open Syslog.
 Syslog.open('denyspam', 0, Syslog::LOG_MAIL)
 
-denyspam = DenySpam.new('/usr/local/etc/denyspam.conf')
+# Start DenySpam.
+denyspam = DenySpam.new(CONFIG_FILE)
+monitor_thread = denyspam.start_monitoring
+
+# Setup signal handlers.
+for sig in [:SIGINT, :SIGQUIT, :SIGTERM]
+  trap(sig) { denyspam.stop_monitoring }
+end
+
+monitor_thread.join

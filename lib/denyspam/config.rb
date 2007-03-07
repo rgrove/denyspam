@@ -30,7 +30,7 @@ class DenySpam; module Config
 
   @default = {
     :MAILLOG         => '/var/log/maillog',
-    :DATA_DIR        => '/usr/local/share/denyspam',
+    :HOSTDATA        => '/var/db/denyspam/hostdata',
     :BLOCK_COMMAND   => '/sbin/pfctl -t denyspam -T add :addresses > /dev/null 2>&1',
     :UNBLOCK_COMMAND => '/sbin/pfctl -t denyspam -T delete :addresses > /dev/null 2>&1',
     :FLUSH_COMMAND   => '/sbin/pfctl -t denyspam -T flush > /dev/null 2>&1',

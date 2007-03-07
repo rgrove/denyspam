@@ -33,7 +33,7 @@ class DenySpam; module Config # <-- don't remove this line
   # DenySpam will attempt to create the specified file and directory if they
   # don't already exist.
 
-  # HOSTDATA = '/usr/local/share/denyspam/hostdata'
+  # HOSTDATA = '/var/db/denyspam/hostdata'
 
   # BLOCK_COMMAND: string
   #
@@ -78,7 +78,7 @@ class DenySpam; module Config # <-- don't remove this line
   #
   # This is a hash of arrays, each array containing one or more regular
   # expressions. Each expression will be evaluated against the descriptive
-  # portion of a mail log entry (the portion beginning after the queue id and
+  # portion of a mail log entry (the portion beginning after the process id and
   # continuing to the end of the line).
   #
   # The keys of the hash should be integers (either positive or negative)
@@ -90,52 +90,24 @@ class DenySpam; module Config # <-- don't remove this line
   #
   # Example:
   #
-  #    RULES = {
-  #      5 => [
-  #        /^Possible SMTP RCPT flood/,
-  #        /^rejecting commands from .* due to pre-greeting traffic/,
-  #      ],
-  #
-  #      2 => [
-  #        /^ruleset=.* reject=(?:550 5\.7\.1|553 5\.1\.[78])/,
-  #        /^<.*>\.\.\. User unknown/,
-  #      ],
-  #
-  #      1 => [
-  #        /^ruleset=.* reject=451 4\.1\.[378]/,
-  #        /^timeout waiting for input from .* during server cmd read/,
-  #        /^lost input channel from .* to MTA after (?:data|rcpt)/,
-  #        /^\[.*\] did not issue MAIL\/EXPN\/VRFY\/ETRN during connection to MTA/,
-  #      ],
-  #
-  #      -1 => [
-  #        /^to=.*, stat=Sent/,
-  #      ],
-  #    }
 
   RULES = {
-    7 => [
-      /^Possible SMTP RCPT flood/,
-      /^rejecting commands from .* due to pre-greeting traffic/,
-    ],
-
     3 => [
-      /^ruleset=.* reject=(?:550 5\.7\.1|553 5\.1\.[78])/,
-      /^<.*>\.\.\. User unknown/,
+      /^NOQUEUE: reject: .+?: 554 5\.7\.1 Service unavailable/,  # RBL hit
     ],
-
+    
     2 => [
-      /^ruleset=.* reject=451 4\.1\.[378]/,
+      /^NOQUEUE: reject: .+?: 550 5\.1\.1/,  # Uknown recipient
     ],
-
+    
     1 => [
-      /^timeout waiting for input from .* during server cmd read/,
-      /^lost input channel from .* to MTA after (?:data|rcpt)/,
-      /^\[.*\] did not issue MAIL\/EXPN\/VRFY\/ETRN during connection to MTA/,
+      /^(?:lost connection|timeout) after CONNECT /,
+      /^timeout after DATA /,
+      /^warning: .+?: hostname .+? verification failed/,
     ],
-
+    
     -1 => [
-      /^to=.*, stat=Sent/,
+      /^[0-9A-Z]{9}: client=/,
     ],
   }
 
@@ -158,36 +130,13 @@ class DenySpam; module Config # <-- don't remove this line
   #
   # Example:
   #
-  #    ADVANCED_RULES = {
-  #      7 => [
-  #        proc {|host, message|
-  #          host.times_seen == 1 && DenySpam::Util::RBL.sbl_xbl?(host.addr)
-  #        },
-  #      ],
-  #
-  #      5 => [
-  #        proc {|host, message|
-  #          host.times_seen == 1 && DenySpam::Util::RBL.spamcop?(host.addr)
-  #        },
-  #
-  #        proc {|host, message|
-  #          host.times_seen == 1 && DenySpam::Util::RBL.ordb?(host.addr)
-  #        },
-  #      ],
-  #
-  #      -20 => [
-  #        proc {|host, message|
-  #          host.times_seen == 1 && host.addr == '192.168.0.105'
-  #        },
-  #      ],
-  #    }
 
-  # ADVANCED_RULES = {
-  #   5 => [
-  #     proc {|host, message|
-  #       host.times_seen == 1 && DenySpam::Util::RBL.spamcop?(host.addr)
-  #     },
-  #   ],
-  # }
+  ADVANCED_RULES = {
+    2 => [
+      proc {|host, message|
+        host.times_seen == 1 && DenySpam::Util::RBL.spamcop?(host.ip)
+      },
+    ],
+  }
 
 end; end # <-- don't remove this line

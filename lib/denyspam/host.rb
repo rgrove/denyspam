@@ -32,10 +32,10 @@ class DenySpam;
   class Host
 
     attr_accessor :blocked_since, :blocked_until, :score
-    attr_reader :addr, :last_seen, :times_seen
+    attr_reader :ip, :last_seen, :times_seen
 
-    def initialize(addr)
-      @addr          = addr
+    def initialize(ip)
+      @ip            = ip
       @blocked_since = nil
       @blocked_until = nil
       @last_seen     = nil
@@ -43,27 +43,25 @@ class DenySpam;
       @times_seen    = 0
     end
 
-    # Returns <i>true</i> if the host is currently blocked, <i>false</i>
-    # otherwise.
+    # Returns _true_ if this host is currently blocked, _false_ otherwise.
     def blocked?
       return !@blocked_until.nil?
     end
 
-    # Returns <i>true</i> if the host is not currently blocked and hasn't been
-    # seen in over one week, <i>false</i> otherwise.
+    # Returns _true_ if this host is not currently blocked and hasn't been seen
+    # in over 90 days, _false_ otherwise.
     def old?
-      return blocked? == false && Time.now - @last_seen > 604800
+      return !blocked? && Time.now - @last_seen > 7776000
     end
 
-    # Updates the host's <i>last_seen</i> time and increments <i>times_seen</i>
-    # by one.
+    # Updates the host's _last_seen_ time and increments _times_seen_ by one.
     def seen
       @last_seen   = Time.now
       @times_seen += 1
     end
 
-    # Returns <i>true</i> if the host is suspected of being a spammer,
-    # <i>false</i> otherwise.
+    # Returns _true_ if the host is suspected of being a spammer, _false_
+    # otherwise.
     def spammer?
       return @score > 0
     end
