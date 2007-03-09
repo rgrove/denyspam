@@ -38,6 +38,8 @@ module DenySpam; module Config
     :DEFAULT_SCORE   => -10,
     :RULES           => {},
     :ADVANCED_RULES  => {},
+    :BLACKLIST       => [],
+    :WHITELIST       => ['127.0.0.1'],
 
     # Undocumented config variables (change these at your own risk).
     :REGEXP_CONNECT    => / postfix\/smtpd\[(\d+)\]: connect from ([^\[]+)\[([\d\.]+)\]\s*$/,
@@ -56,10 +58,25 @@ module DenySpam; module Config
 
   def self.load_config(config_file)
     load config_file if File.exist?(config_file)
+    
+    # Ensure that BLACKLIST and WHITELIST contain only valid IP addresses.
+    Config::BLACKLIST.each do |ip|
+      unless ip =~ /^(?:\d{1,3}\.){3}\d{1,3}$/
+        raise "invalid ip address in blacklist: #{ip}" 
+      end
+    end
+    
+    Config::WHITELIST.each do |ip|
+      unless ip =~ /^(?:\d{1,3}\.){3}\d{1,3}$/
+        raise "invalid ip address in whitelist: #{ip}"
+      end
+    end
 
-  rescue Exception => e
+  rescue => e
     message = e.message.gsub("\n", '; ')
 
+    # TODO: Fail visibly when running as a daemon (or at least remove the pid file).
+    
     if Syslog.opened?
       Syslog.log(Syslog::LOG_ERR, 'configuration error in %s: %s', config_file,
           message)

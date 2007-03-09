@@ -92,23 +92,25 @@ module DenySpam; module Config # <-- don't remove this line
   #
 
   RULES = {
-    3 => [
+    5 => [
       /^NOQUEUE: reject: .+?: 554 5\.7\.1 Service unavailable/,  # RBL hit
     ],
     
     2 => [
       /^NOQUEUE: reject: .+?: 550 5\.1\.1/,  # Uknown recipient
       /^NOQUEUE: reject: .+?: 501 5\.5\.2/,  # Invalid name during HELO
+      /^warning: Illegal address syntax/,
     ],
     
     1 => [
       /^(?:lost connection|timeout) after CONNECT /,
       /^timeout after DATA /,
       /^warning: .+?: hostname .+? verification failed/,
+      /^warning: .+?: address not listed for hostname/,
     ],
     
     -1 => [
-      /^[0-9A-Z]{9}: client=/,
+      /^[0-9A-Z]{9}: client=/,  # Message accepted for delivery
     ],
   }
 
@@ -139,5 +141,21 @@ module DenySpam; module Config # <-- don't remove this line
       },
     ],
   }
+  
+  # BLACKLIST: array
+  #
+  # Array of IP addresses that should always be blocked.
+  
+  # BLACKLIST = []
+  
+  # WHITELIST: array
+  #
+  # Array of IP addresses that should never be blocked.
+  
+  WHITELIST = [
+    '127.0.0.1',
+    '216.145.48.34',   # Yahoo!
+    '216.145.54.172',  # Yahoo!
+  ]
 
 end; end # <-- don't remove this line

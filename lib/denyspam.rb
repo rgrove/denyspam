@@ -306,6 +306,10 @@ module DenySpam
       end
     end
     
+    Config::BLACKLIST.each do |ip|
+      blocked << ip
+    end
+    
     block(blocked) if blocked.length > 0
     unblock(unblocked) if unblocked.length > 0
   end
@@ -320,7 +324,7 @@ module DenySpam
   # host's score as necessary.
   def self.apply_rules(conn)
     return false if conn[:ip].nil? || conn[:buffer].empty?
-    return false if conn[:ip] == '127.0.0.1'
+    return true if Config::WHITELIST.include?(conn[:ip])
     
     host = @hosts[conn[:ip]] ||= Host.new(conn[:ip])
     
