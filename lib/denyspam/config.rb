@@ -75,15 +75,13 @@ module DenySpam; module Config
   rescue => e
     message = e.message.gsub("\n", '; ')
 
-    # TODO: Fail visibly when running as a daemon (or at least remove the pid file).
-    
     if Syslog.opened?
       Syslog.log(Syslog::LOG_ERR, 'configuration error in %s: %s', config_file,
           message)
       Syslog.close
     end
 
-    abort "** Error: configuration error in #{config_file}: #{message}"
+    DenySpam.abort("** Error: configuration error in #{config_file}: #{message}")
   end
 
 end; end

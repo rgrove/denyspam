@@ -58,9 +58,10 @@ module DenySpam
   PIDFILE = '/var/run/denyspam.pid'
 
   @connections = {}
+  @daemon      = false
   @hosts       = {}
   @lastpos     = 0
-  @monitoring = false
+  @monitoring  = false
   @threads     = {}
 
   #--
@@ -160,6 +161,8 @@ module DenySpam
       Process.setsid
       exit if fork
       
+      @daemon = true
+      
       # Write pid file.
       File.open(PIDFILE, 'w') {|file| file << Process.pid }
       
@@ -258,6 +261,9 @@ module DenySpam
     
     pid = File.read(PIDFILE, 20).strip
     FileUtils.rm(PIDFILE)
+    
+    @daemon = false
+    
     pid && Process.kill('TERM', pid.to_i)    
   end
   
@@ -319,6 +325,17 @@ module DenySpam
   #++
 
   private
+  
+  alias original_abort abort
+  
+  # Daemon-safe implementation of Kernel.abort.
+  def self.abort(message)
+    if @daemon && File.file?(PIDFILE)
+      FileUtils.rm(PIDFILE)
+    end
+
+    original_abort(message)
+  end
   
   # Tests DenySpam rules against the specified connection hash and modified the
   # host's score as necessary.
