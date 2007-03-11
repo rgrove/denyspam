@@ -136,8 +136,18 @@ module DenySpam; module Config # <-- don't remove this line
 
   ADVANCED_RULES = {
     2 => [
-      proc {|host, message|
+      proc {|host, entry|
         host.times_seen == 1 && DenySpam::Util::RBL.spamcop?(host.ip)
+      },
+    ],
+    
+    1 => [
+      proc {|host, entry|
+        host.times_seen == 1 && DenySpam::Util::RBL.dsbl?(host.ip)
+      },
+      
+      proc {|host, entry|
+        host.times_seen == 1 && DenySpam::Util::RBL.sorbs?(host.ip)
       },
     ],
   }
@@ -146,7 +156,9 @@ module DenySpam; module Config # <-- don't remove this line
   #
   # Array of IP addresses that should always be blocked.
   
-  # BLACKLIST = []
+  BLACKLIST = [
+    '202.158.186.57',  # Viagra spam
+  ]
   
   # WHITELIST: array
   #
